@@ -1,10 +1,11 @@
---show region/country/location tree
+--get region/country/location tree
 select regions.region_name, countries.country_name, locations.city 
 from HR.regions  
 join HR.countries on regions.region_id = countries.region_id 
 join HR.locations on countries.country_id = locations.country_id;
 
---show dept/manager/employee tree
+
+--get dept/manager/employee tree
 with mytable as (select departments.department_name as dept, 
     (select employees.first_name || ' ' || employees.last_name
     from HR.employees
@@ -19,15 +20,19 @@ where mytable.emp <> mytable.mngr
 order by mytable.dept;
 
 
---show unique salary avg  by job title, with count
+--get unique salary avg  by job title, with count
 select distinct jobs.job_title, ((jobs.min_salary + jobs.max_salary) / 2) as "avg salary", count(*) over (partition by employees.job_id) as "#Emps"
 from HR.jobs
 join HR.employees on jobs.job_id = employees.job_id
 order by "avg salary" desc;
 
 
---show jobs by length of stay (popularity?) top 5, bottom 5
-select distinct jobs.job_title, max(floor(job_history.end_date - job_history.start_date)) over (partition by jobs.job_title) as "Days worked"
+--get jobs by length of stay (popularity?)
+select distinct jobs.job_title, 
+    max(floor(months_between(job_history.end_date, job_history.start_date)/12)) over (partition by jobs.job_title) as "Years",
+    max(floor(mod(job_history.end_date - job_history.start_date, 360)/30)) over (partition by jobs.job_title) as "Months",
+    max(floor(mod(job_history.end_date - job_history.start_date, 30))) over (partition by jobs.job_title) as "Days"
 from HR.jobs
 join HR.job_history on jobs.job_id = job_history.job_id
-order by "Days worked" desc
+order by "Years" desc;
+
