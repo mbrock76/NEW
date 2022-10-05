@@ -1,0 +1,90 @@
+# --------1---------
+import pandas as pd
+import matplotlib.pyplot as plt
+import locale
+locale.setlocale( locale.LC_ALL, 'en_US.UTF-8' )
+
+# begin by creating a dataframe of all the records in the excel sheet
+df = pd.read_excel(r'C:\Users\Brock\Documents\My Tableau Repository\Datasources\Sample - Superstore.xls', parse_dates=["Order Date"])
+df.set_index("Row ID", inplace=True)
+df["Order Date"] = pd.to_datetime(df["Order Date"], format='%Y-%m-%d', errors="coerce")
+df.head()
+
+
+
+# -------2---------
+# initialize a dictionary of categories and sales
+salesByCat = {'Furniture': 0, 'Office Supplies': 0, 'Technology': 0}
+
+# iterate through the dataframe and create the dictionaries
+for each in df.iterrows():
+    
+    # total the sales for each category
+    salesByCat[each[1].Category] += round(each[1].Sales)
+    
+# initialize a dictionary for states and sales
+salesByState = df.groupby(["State", "Sales"]).sum().reset_index().groupby("State").mean()
+        
+# make a new dataframe from the sales by category data
+sbc = pd.DataFrame.from_dict(salesByCat, orient='index')
+
+# create a pie chart of categories with sales as a percentage
+plt.pie(salesByCat.values(), labels=salesByCat.keys(), autopct='%1.1f%%')
+plt.axis('equal')
+plt.show()
+
+# create a bar chart for total sales
+sbc.plot.bar()
+plt.legend("$")
+
+
+
+
+
+# ---------3-------------
+# create a new dataframe with the averages for each state
+salesByState = df.groupby(["State"]).sum().reset_index().groupby("State").mean()
+
+# clean up:
+# format currency
+salesByState[["Sales", "Profit"]] = salesByState[["Sales", "Profit"]].apply(lambda series: series.apply(lambda x: locale.currency(x, grouping = True)))
+
+# drop unwanted columns
+salesByState = salesByState.drop(["Postal Code", "Quantity", "Discount"], axis=1)
+
+salesByState
+
+
+
+
+# ---------4---------
+# import ipywidgets as widgets
+# from ipywidgets import interactive
+ 
+# items = [2014,2015,2016,2017,2018]
+ 
+# def view(x=''):
+
+#     return sbd.loc[(sbd["Order Date"].dt.year == x)]
+
+# w = widgets.Select(options=items)
+# interactive(view, x=w)
+
+
+
+# create a new dataframe grouped by date
+sbd = df.groupby(pd.Grouper(key = "Order Date", freq = "M")).sum().reset_index()
+
+# clean up:
+# drop unwanted columns
+sbd = sbd.drop(["Postal Code", "Quantity", "Discount"], axis=1)
+
+# select year
+sbd = sbd.loc[(sbd["Order Date"].dt.year == 2014)]
+
+# format date
+sbd.rename(columns = {"Order Date": "Month"}, inplace = True)
+sbd["Month"] = sbd["Month"].dt.strftime('%b')
+sbd = sbd.set_index("Month")
+
+sbd.plot()
